@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Basketball Tactics Board v0.4</title>
+<style>
+:root{--bg:#090b10;--panel:#171c27;--muted:#b7c0d1;--blue:#3478f6;--red:#dc353b;--orange:#fb9028}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:system-ui,-apple-system,sans-serif}
+header{padding:14px 16px 10px;max-width:1200px;margin:auto}h1{font-size:clamp(1.25rem,3vw,1.8rem);margin:0}.sub{font-size:.84rem;color:var(--muted);margin-top:4px}
+main{max-width:1200px;margin:auto;padding:0 12px 20px;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:12px}
+.card{background:var(--panel);border:1px solid #2c3445;border-radius:14px;padding:10px;min-width:0}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}.toolbar button,button,select{font:inherit;border:1px solid #414b60;border-radius:9px;padding:8px 10px;background:#293246;color:#fff}.toolbar button.active{background:#f2f5fb;color:#111827;font-weight:800}
+.court-wrap{width:100%;overflow:hidden;border-radius:12px;background:var(--orange)}svg{width:100%;height:auto;display:block;touch-action:none;user-select:none}
+.player{cursor:grab;touch-action:none}.player:active{cursor:grabbing}.player .hit{fill:transparent;stroke:transparent}.player.selected .ring{stroke:#fff39a;stroke-width:6}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.78rem;margin-top:8px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+h2{font-size:1rem;margin:0 0 10px}.field{margin:11px 0}.field label{font-size:.83rem;display:block;margin-bottom:5px}.field select,.field input[type=range]{width:100%}.field input[type=range]{accent-color:var(--orange)}.check{font-size:.83rem;display:flex;gap:7px;align-items:center;margin:9px 0}
+button.primary{width:100%;background:var(--orange);color:#24160b;border:0;font-weight:800}.hint{font-size:.78rem;color:var(--muted);line-height:1.5}.status{font-size:.78rem;color:#7ee0ad;margin-top:8px;min-height:1em}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:7px}.stat{background:#0c111b;padding:9px;border-radius:9px}.stat small{font-size:.7rem;color:var(--muted);display:block}.stat strong{font-size:1.05rem}.analysis{font-size:.82rem;line-height:1.55;background:#0c111b;padding:10px;border-radius:9px;margin-top:8px}
+@media(max-width:850px){main{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:9px}}
+@media(max-width:560px){header{padding:12px 10px 8px}main{padding:0 5px 16px;gap:7px}.card{padding:7px}.side{grid-template-columns:1fr}.toolbar button{font-size:.76rem;padding:8px}}
+</style>
+</head>
+<body>
+<header><h1>🏀 Basketball Tactics Board <span style="font-size:.7em;color:#ffb36d">v0.4</span></h1><div class="sub">参考画像と同じ向き・初期配置に修正。選手10人とボールを配置済み。</div></header>
+<main>
+<section class="card">
+<div class="toolbar"><button id="playerMode" class="active">選手を動かす</button><button id="ballMode">ボール保持者を変更</button><button id="ai" class="active">守備AI：ON</button><button id="reset">初期配置に戻す</button></div>
+<div class="court-wrap">
+<svg id="court" viewBox="0 0 830 1100" aria-label="バスケットボール戦術ボード">
+<defs>
+ <linearGradient id="blueGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#77a6ff"/><stop offset="1" stop-color="#155be8"/></linearGradient>
+ <linearGradient id="redGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff7777"/><stop offset="1" stop-color="#c91f2a"/></linearGradient>
+</defs>
+<!-- Orange court and the exact visual orientation of the reference: basket at left, key on right -->
+<rect x="0" y="0" width="830" height="1100" rx="18" fill="#fb9028"/>
+<rect x="16" y="12" width="798" height="1074" fill="none" stroke="#fff" stroke-width="4.5"/>
+<!-- hoop / backboard and left baseline markings -->
+<path d="M16 423 A123 123 0 0 1 16 669" fill="none" stroke="#fff" stroke-width="4"/>
+<path d="M16 500 A48 48 0 0 1 16 592" fill="none" stroke="#fff" stroke-width="4"/>
+<path d="M16 522 A26 26 0 0 1 16 570" fill="none" stroke="#fff" stroke-width="4"/>
+<line x1="28" y1="542" x2="48" y2="542" stroke="#fff" stroke-width="4"/>
+<!-- three-point line: straight corner segments + broad arc -->
+<path d="M814 132 L685 132 A380 380 0 0 0 306 542 A380 380 0 0 0 685 952 L814 952" fill="none" stroke="#fff" stroke-width="4"/>
+<!-- lane / paint, matching screenshot orientation -->
+<rect x="452" y="394" width="362" height="286" fill="#559bb0" fill-opacity=".94" stroke="#fff" stroke-width="4"/>
+<!-- free throw semicircle: solid above, dashed below -->
+<path d="M452 394 A143 143 0 0 1 452 680" fill="none" stroke="#fff" stroke-width="4"/>
+<path d="M452 394 A143 143 0 0 0 452 680" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="13 13"/>
+<!-- far edge of lane / restricted-side marks -->
+<line x1="780" y1="477" x2="780" y2="597" stroke="#fff" stroke-width="4"/>
+<g id="lines"></g><g id="players"></g>
+<g id="staticFallback" pointer-events="none">
+  <!-- Offense: blue -->
+  <g fill="url(#blueGrad)" stroke="#e6e9ef" stroke-width="5" text-anchor="middle" font-weight="800" font-size="29" fill-opacity="1">
+    <circle cx="160" cy="516" r="40"/><circle cx="490" cy="937" r="40"/><circle cx="415" cy="218" r="40"/><circle cx="685" cy="78" r="40"/><circle cx="760" cy="365" r="40"/>
+  </g>
+  <g fill="white" text-anchor="middle" font-size="29" font-weight="850">
+    <text x="160" y="526">1</text><text x="490" y="947">2</text><text x="415" y="228">3</text><text x="685" y="88">4</text><text x="760" y="375">5</text>
+  </g>
+  <!-- Defense: red -->
+  <g fill="url(#redGrad)" stroke="#e6e9ef" stroke-width="5" text-anchor="middle" font-weight="800" font-size="29">
+    <circle cx="295" cy="565" r="40"/><circle cx="475" cy="740" r="40"/><circle cx="468" cy="425" r="40"/><circle cx="630" cy="373" r="40"/><circle cx="743" cy="555" r="40"/>
+  </g>
+  <g fill="white" text-anchor="middle" font-size="29" font-weight="850">
+    <text x="295" y="575">1</text><text x="475" y="750">2</text><text x="468" y="435">3</text><text x="630" y="383">4</text><text x="743" y="565">5</text>
+  </g>
+  <g fill="white" text-anchor="middle" font-size="21" font-weight="800">
+    <text x="160" y="577">選手 1</text><text x="490" y="998">選手 2</text><text x="415" y="279">選手 3</text><text x="685" y="139">選手 4</text><text x="760" y="426">選手 5</text>
+    <text x="295" y="626">選手 1</text><text x="475" y="801">選手 2</text><text x="468" y="486">選手 3</text><text x="630" y="434">選手 4</text><text x="743" y="616">選手 5</text>
+  </g>
+  <g>
+    <circle cx="184" cy="540" r="28" fill="#f57b20" stroke="#432719" stroke-width="2"/>
+    <path d="M157 540 Q184 523 211 540 M184 512 Q166 540 184 568 M184 512 Q202 540 184 568" fill="none" stroke="#432719" stroke-width="1.5"/>
+  </g>
+</g>
+
+<g id="ball" style="cursor:grab">
+ <circle id="ballHit" r="28" fill="transparent"/>
+ <circle id="ballShadow" r="29" fill="#222" opacity=".14"/>
+ <circle id="ballCore" r="28" fill="#f57b20" stroke="#432719" stroke-width="2"/>
+ <path id="ballSeams" fill="none" stroke="#432719" stroke-width="1.5"/>
+</g>
+</svg>
+</div>
+<div class="legend"><span><i class="dot" style="background:var(--blue)"></i>オフェンス</span><span><i class="dot" style="background:var(--red)"></i>ディフェンス</span><span>選手を直接ドラッグして移動</span></div>
+<div class="hint" style="margin-top:7px">ボールは保持者の青い選手にくっつきます。「ボール保持者を変更」で青い選手をタップしてパスできます。守備AIをOFFにすると赤い選手も手動で動かせます。</div>
+</section>
+<aside class="side">
+<section class="card">
+<h2>守備AI設定</h2><div class="hint">ボールマン：オンボール。近い2人：ギャップ。遠い2人：ヘルプ。ヘルプの守備はコート中央の横ライン付近に寄り、ギャップの守備はボールマンとマークマンの間に立ち、全員が担当選手のゴール側を維持します。</div>
+<div class="field"><label for="behavior">守備方針</label><select id="behavior"><option value="man">マンツーマン（ギャップ／ヘルプ）</option><option value="help">強めのヘルプ</option><option value="zone">ゾーン風</option><option value="switch">スイッチ風</option></select></div>
+<div class="field"><label for="help">ヘルプの強さ：<b id="helpVal">55%</b></label><input id="help" type="range" min="0" max="100" value="55"></div>
+<div class="field"><label for="gap">マーク距離：<b id="gapVal">標準</b></label><input id="gap" type="range" min="20" max="90" value="48"></div>
+<label class="check"><input id="showLines" type="checkbox" checked> マーク線を表示</label>
+<button class="primary" id="recalc">守備位置を再計算</button><div id="status" class="status">準備完了</div>
+</section>
+<section class="card">
+<h2>配置の簡易分析</h2>
+<div class="stats">
+<div class="stat"><small>ボールへの最短距離</small><strong id="nearest">—</strong></div>
+<div class="stat"><small>平均マーク距離</small><strong id="mark">—</strong></div>
+<div class="stat"><small>ペイント内の守備</small><strong id="paint">—</strong></div>
+<div class="stat"><small>攻撃選手間の平均距離</small><strong id="space">—</strong></div>
+</div><div id="analysis" class="analysis">選手配置を動かすと簡易分析を更新します。</div>
+</section>
+</aside>
+</main>
+<script>
+const $=id=>document.getElementById(id),svg=$('court'),pg=$('players'),lg=$('lines');
+const initial={
+ off:[{x:160,y:516,n:1},{x:490,y:937,n:2},{x:415,y:218,n:3},{x:685,y:78,n:4},{x:760,y:365,n:5}],
+ def:[{x:295,y:565,n:1},{x:475,y:740,n:2},{x:468,y:425,n:3},{x:630,y:373,n:4},{x:743,y:555,n:5}],
+ ball:{x:180,y:584}
+};
+let s=JSON.parse(JSON.stringify(initial)),mode='player',auto=true,drag=null,selected=null,raf=null,ballHolder=0;
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function el(tag,attrs={}){const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);return n}
+function point(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());return{x:clamp(q.x,35,795),y:clamp(q.y,35,1065)}}
+function cfg(){return{behavior:$('behavior').value,help:+$('help').value/100,gap:+$('gap').value}}
+function syncBall(){const p=s.off[ballHolder];s.ball={x:clamp(p.x+24,35,795),y:clamp(p.y+24,35,1065)}}
+function drawPlayer(p,team,i){
+ const g=el('g',{class:'player'+(selected&&selected.team===team&&selected.i===i?' selected':''),transform:`translate(${p.x} ${p.y})`});
+ // 34px hit radius improves touch selection while preserving screenshot-like 42px tokens
+ g.appendChild(el('circle',{class:'hit',r:39}));
+ g.appendChild(el('circle',{class:'ring',r:40,fill:'transparent',stroke:'transparent','stroke-width':3}));
+ g.appendChild(el('circle',{r:40,fill:team==='off'?'url(#blueGrad)':'url(#redGrad)',stroke:'#e6e9ef','stroke-width':5}));
+ const num=el('text',{x:0,y:9,'text-anchor':'middle','font-size':29,'font-weight':850,fill:'#fff','pointer-events':'none'});num.textContent=p.n;g.appendChild(num);
+ const label=el('text',{x:0,y:61,'text-anchor':'middle','font-size':21,'font-weight':800,fill:'#fff','pointer-events':'none'});label.textContent='選手 '+p.n;g.appendChild(label);
+ g.addEventListener('pointerdown',e=>{if(mode==='holder'){if(team==='off'){e.preventDefault();e.stopPropagation();ballHolder=i;selected={team,i};syncBall();if(auto)updateDefense(true);render(false);$('status').textContent='青の'+p.n+'番がボールを保持しています。'}return}if(mode!=='player')return;e.preventDefault();e.stopPropagation();if(team==='def'&&auto){selected={team,i};$('status').textContent='赤い選手を動かすには守備AIをOFFにしてください。';render(false);return}selected={team,i};drag={team,i};svg.setPointerCapture(e.pointerId);$('status').textContent=(team==='off'?'青':'赤')+' '+p.n+'番を移動中';render(false)});
+ pg.appendChild(g)
+}
+function updateBall(){const{x,y}=s.ball;for(const id of ['ballCore','ballShadow']){$(id).setAttribute('cx',x+(id==='ballShadow'?3:0));$(id).setAttribute('cy',y+(id==='ballShadow'?4:0))}$('ballSeams').setAttribute('d',`M${x-27} ${y} Q${x} ${y-17} ${x+27} ${y} M${x} ${y-27} Q${x-18} ${y} ${x} ${y+27} M${x} ${y-27} Q${x+18} ${y} ${x} ${y+27}`)}
+function targetPositions(){
+ const c=cfg(),o=s.off,b=o[ballHolder],d=s.def;
+ // Hoop is on the RIGHT in this board. Goal-side means x >= own mark.x.
+ const midY=546,margin=16;
+ // Determine roles using distance to ball-holder; opposite side is identified
+ // by being on the other side of the court's horizontal center line.
+ const others=o.map((p,i)=>({i,dd:dist(p,b)}))
+   .filter(v=>v.i!==ballHolder).sort((a,z)=>a.dd-z.dd);
+ const rank=Array(5).fill(2);rank[ballHolder]=0;
+ others.forEach((v,k)=>rank[v.i]=k<2?1:2);
+ let assign=[0,1,2,3,4];
+ if(c.behavior==='switch'){
+   const used=new Set();
+   assign=d.map(dd=>{let best=-1,bd=Infinity;
+     for(let j=0;j<5;j++)if(!used.has(j)&&dist(dd,o[j])<bd){
+       bd=dist(dd,o[j]);best=j;
+     }
+     used.add(best);return best;
+   });
+ }
+ return d.map((dd,i)=>{
+   const mark=o[assign[i]],role=rank[assign[i]];
+   // Top possession: defenders assigned to either corner remain on the
+   // same horizontal coordinate (x) as their own corner offensive player.
+   const topBall=b.x<360 && Math.abs(b.y-midY)<200;
+   const cornerMark=mark.x>440 && (mark.y<260 || mark.y>830);
+   let x,y;
+   if(role===0){
+     // On-ball: always between own mark and hoop, never on the far side.
+     x=mark.x+c.gap;
+     y=mark.y+(midY-mark.y)*.07;
+   }else{
+     const opposite=(mark.y-midY)*(b.y-midY)<0 && Math.abs(mark.y-b.y)>170;
+     const deepHelp=role===2;
+     if(deepHelp){
+       // Weak-side: sink toward the horizontal center line (midY).
+       const towardCenter=opposite?.78:.57;
+       x=mark.x+(role===2?80:50)+c.help*30;
+       y=mark.y+(midY-mark.y)*towardCenter;
+     }else{
+       // Gap: position on the line from the marked attacker toward
+       // the ball handler, while preserving a goal-side x offset.
+       const fraction=.35+c.help*.12;
+       x=mark.x+(b.x-mark.x)*fraction;
+       y=mark.y+(b.y-mark.y)*fraction;
+       x=Math.max(x,mark.x+16);
+     }
+     if(c.behavior==='help'){x+=12;y+=(midY-y)*.08}
+     if(c.behavior==='zone'){x+=8;y+=(midY-y)*.10}
+   }
+   // Top ball + corner assignment: align horizontal (x) position,
+   // not vertical (y). Maintain the required small goal-side margin.
+   if(topBall && cornerMark && role!==0){
+     x=mark.x+margin;
+   }
+   // Mandatory rule on every frame, including animated transitions:
+   // defender must not go beyond its own offensive player toward half court.
+   x=Math.max(x,mark.x+margin);
+   x=clamp(x,24,800);
+   y=clamp(y,34,1064);
+   return {x,y};
+ });
+}
+function enforceGoalSide(){
+ // Applied after every update, even during animations and AI toggles.
+ if(!auto)return;
+ for(let i=0;i<5;i++){
+   s.def[i].x=Math.max(s.def[i].x,s.off[i].x+16);
+   s.def[i].x=clamp(s.def[i].x,24,800);
+ }
+}
+// Follow a continuously recalculated target, instead of teleporting on drag.
+let followActive=false,followLast=0,followFrame=null;
+function followTick(now){
+ if(!auto){followActive=false;followFrame=null;return}
+ const dt=Math.min(48,now-(followLast||now));followLast=now;
+ const targets=targetPositions();
+ // Smooth at every frame, including when a player crosses the corner boundary.
+ const alpha=1-Math.exp(-dt/155);
+ let moving=false;
+ s.def.forEach((p,i)=>{
+   const t=targets[i],dx=t.x-p.x,dy=t.y-p.y;
+   if(Math.abs(dx)+Math.abs(dy)>.6)moving=true;
+   p.x+=dx*alpha;p.y+=dy*alpha;
+ });
+ enforceGoalSide();render(false);
+ if(drag||moving){followFrame=requestAnimationFrame(followTick)}
+ else{followActive=false;followFrame=null;followLast=0}
+}
+function updateDefense(animate=true){
+ if(!auto)return;
+ if(!animate){if(!followActive){s.def.forEach((p,i)=>Object.assign(p,targetPositions()[i]));enforceGoalSide()}return}
+ if(!followActive){followActive=true;followLast=0;followFrame=requestAnimationFrame(followTick)}
+}
+function updateLines(){lg.innerHTML='';if(!$('showLines').checked)return;s.def.forEach((d,i)=>lg.appendChild(el('line',{x1:d.x,y1:d.y,x2:s.off[i].x,y2:s.off[i].y,stroke:'#fff4df','stroke-width':2,'stroke-dasharray':'6 7',opacity:.55})));const n=s.def.reduce((a,b)=>dist(a,s.ball)<dist(b,s.ball)?a:b);lg.appendChild(el('line',{x1:n.x,y1:n.y,x2:s.ball.x,y2:s.ball.y,stroke:'#fff2a0','stroke-width':3,'stroke-dasharray':'5 6'}))}
+function analyze(){const nearest=Math.min(...s.def.map(d=>dist(d,s.ball))),mark=s.def.reduce((v,d,i)=>v+dist(d,s.off[i]),0)/5,paint=s.def.filter(d=>d.x>452&&d.x<814&&d.y>394&&d.y<680).length;let ds=[];for(let i=0;i<5;i++)for(let j=i+1;j<5;j++)ds.push(dist(s.off[i],s.off[j]));$('nearest').textContent=nearest.toFixed(0)+' px';$('mark').textContent=mark.toFixed(0)+' px';$('paint').textContent=paint+'人';$('space').textContent=(ds.reduce((a,b)=>a+b,0)/ds.length).toFixed(0)+' px';$('analysis').textContent=(nearest<65?'ボールに近い守備がいます。':'ボール周辺にスペースがあります。')+(mark>145?' 平均マーク距離が大きめです。':' 配置を変えてドライブやキックアウトのコースを比べてみましょう。')}
+function render(recalc=true){syncBall();enforceGoalSide();const fb=$('staticFallback');if(fb)fb.style.display='none';if(recalc&&auto)updateDefense(false);pg.innerHTML='';s.off.forEach((p,i)=>drawPlayer(p,'off',i));s.def.forEach((p,i)=>drawPlayer(p,'def',i));updateBall();updateLines();analyze()}
+svg.addEventListener('pointermove',e=>{if(!drag)return;const p=point(e);if(drag.team==='ball')s.ball=p;else s[drag.team][drag.i]={...s[drag.team][drag.i],...p};syncBall();if(auto)updateDefense(true);render(false)});
+svg.addEventListener('pointerup',()=>{if(!drag)return;drag=null;if(auto)updateDefense(true);render(false);$('status').textContent='配置を更新しました。'});svg.addEventListener('pointercancel',()=>drag=null);
+$('ball').style.pointerEvents='none';
+$('playerMode').onclick=()=>{mode='player';$('playerMode').classList.add('active');$('ballMode').classList.remove('active');$('status').textContent='選手を直接ドラッグできます。'};
+$('ballMode').onclick=()=>{mode='holder';$('ballMode').classList.add('active');$('playerMode').classList.remove('active');$('status').textContent='ボールを持たせたい青い選手をタップしてください。'};
+$('ai').onclick=()=>{auto=!auto;$('ai').textContent='守備AI：'+(auto?'ON':'OFF');$('ai').classList.toggle('active',auto);if(auto)updateDefense(true);render(false);$('status').textContent=auto?'守備AIをONにしました。':'守備AIをOFFにしました。赤い選手も移動できます。'};
+$('reset').onclick=()=>{s=JSON.parse(JSON.stringify(initial));ballHolder=0;selected=null;syncBall();if(auto){followActive=false;if(followFrame)cancelAnimationFrame(followFrame);followFrame=null;updateDefense(false)}render(false);$('status').textContent='写真と同じ初期配置に戻しました。'};
+$('recalc').onclick=()=>{updateDefense(true);$('status').textContent='守備位置を再計算しました。'};
+$('behavior').onchange=()=>{if(auto)updateDefense(true);render(false)};$('help').oninput=()=>{$('helpVal').textContent=$('help').value+'%';if(auto)updateDefense(false);render(false)};$('gap').oninput=()=>{$('gapVal').textContent=+$('gap').value<38?'タイト':+$('gap').value>68?'距離を取る':'標準';if(auto)updateDefense(false);render(false)};$('showLines').onchange=updateLines;
+render(false);
+</script>
+</body></html>

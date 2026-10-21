@@ -215,10 +215,17 @@ function targetPositions(){
     const oldRole=defenseRoles[i];
     const newRole=nextRoles[i];
 
+   
+    const hoop={x:752,y:537};
+    const dx=hoop.x-mark.x;
+    const dy=hoop.y-mark.y;
+    const distanceToHoop=Math.hypot(dx,dy);
+
     const onBall={
-      x:mark.x+c.gap,
-      y:mark.y+(midY-mark.y)*0.07
+      x:mark.x+(dx/distanceToHoop)*c.gap,
+      y:mark.y+(dy/distanceToHoop)*c.gap
     };
+
 
     const gap={
       x:Math.max(

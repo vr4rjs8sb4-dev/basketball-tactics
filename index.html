@@ -123,6 +123,7 @@ function cfg(){return{behavior:$('behavior').value,help:+$('help').value/100,gap
 let passing = false;
 let passFrame = null;
 function syncBall(){
+ function syncBall(){
   if(passing) return;
   const p=s.off[ballHolder];
   s.ball={

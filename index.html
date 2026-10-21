@@ -227,17 +227,13 @@ function targetPositions(){
       ),
       y:mark.y+(b.y-mark.y)*(.28+c.help*.10)
     };
-
-    const opposite=
-      (mark.y-midY)*(b.y-midY)<0;
-
-    const helpAmount=opposite?.62:.45;
-
     const help={
-      x:mark.x+55+c.help*25,
-      y:mark.y+(midY-mark.y)*helpAmount
+      x:Math.max(
+        (mark.x+b.x)/2,
+        mark.x+margin
+      ),
+      y:(mark.y+b.y)/2
     };
-
     function position(role){
       return role===0?onBall:
              role===1?gap:help;
@@ -266,17 +262,25 @@ function targetPositions(){
     const dy=target.y-mark.y;
     const length=Math.hypot(dx,dy);
 
-    if(length>maxDistance){
-      const scale=maxDistance/length;
-      target.x=mark.x+dx*scale;
-      target.y=mark.y+dy*scale;
+    if(newRole!==2){
+      const maxDistance=145;
+      const dx=target.x-mark.x;
+      const dy=target.y-mark.y;
+      const length=Math.hypot(dx,dy);
+
+      if(length>maxDistance){
+        const scale=maxDistance/length;
+        target.x=mark.x+dx*scale;
+        target.y=mark.y+dy*scale;
+      }
     }
 
-    target.x=Math.max(target.x,mark.x+margin);
+    target.x=Math.max(
+      target.x,
+      mark.x+margin
+    );
 
-    return {
-      x:clamp(target.x,24,800),
-      y:clamp(target.y,34,1064)
+    
     };
   });
 

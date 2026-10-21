@@ -122,8 +122,6 @@ function point(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const
 function cfg(){return{behavior:$('behavior').value,help:+$('help').value/100,gap:+$('gap').value}}
 let passing = false;
 let passFrame = null;
-
-function syncBall(){
   if(passing) return;
   const p=s.off[ballHolder];
   s.ball={

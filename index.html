@@ -277,50 +277,6 @@ function targetPositions(){
   defenseRoles=nextRoles;
   return result;
 }
- return d.map((dd,i)=>{
-   const mark=o[assign[i]],role=rank[assign[i]];
-   // Top possession: defenders assigned to either corner remain on the
-   // same horizontal coordinate (x) as their own corner offensive player.
-   const topBall=b.x<360 && Math.abs(b.y-midY)<200;
-   const cornerMark=mark.x>440 && (mark.y<260 || mark.y>830);
-   let x,y;
-   if(role===0){
-     // On-ball: always between own mark and hoop, never on the far side.
-     x=mark.x+c.gap;
-     y=mark.y+(midY-mark.y)*.07;
-   }else{
-     const opposite=(mark.y-midY)*(b.y-midY)<0 && Math.abs(mark.y-b.y)>170;
-     const deepHelp=role===2;
-     if(deepHelp){
-       // Weak-side: sink toward the horizontal center line (midY).
-       const towardCenter=opposite?.78:.57;
-       x=mark.x+(role===2?80:50)+c.help*30;
-       y=mark.y+(midY-mark.y)*towardCenter;
-     }else{
-       // Gap: position on the line from the marked attacker toward
-       // the ball handler, while preserving a goal-side x offset.
-       const fraction=.35+c.help*.12;
-       x=mark.x+(b.x-mark.x)*fraction;
-       y=mark.y+(b.y-mark.y)*fraction;
-       x=Math.max(x,mark.x+16);
-     }
-     if(c.behavior==='help'){x+=12;y+=(midY-y)*.08}
-     if(c.behavior==='zone'){x+=8;y+=(midY-y)*.10}
-   }
-   // Top ball + corner assignment: align horizontal (x) position,
-   // not vertical (y). Maintain the required small goal-side margin.
-   if(topBall && cornerMark && role!==0){
-     x=mark.x+margin;
-   }
-   // Mandatory rule on every frame, including animated transitions:
-   // defender must not go beyond its own offensive player toward half court.
-   x=Math.max(x,mark.x+margin);
-   x=clamp(x,24,800);
-   y=clamp(y,34,1064);
-   return {x,y};
- });
-}
-function enforceGoalSide(){
  // Applied after every update, even during animations and AI toggles.
  if(!auto)return;
  for(let i=0;i<5;i++){

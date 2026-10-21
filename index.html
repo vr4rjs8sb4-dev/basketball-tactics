@@ -184,26 +184,99 @@ function drawPlayer(p,team,i){
  pg.appendChild(g)
 }
 function updateBall(){const{x,y}=s.ball;for(const id of ['ballCore','ballShadow']){$(id).setAttribute('cx',x+(id==='ballShadow'?3:0));$(id).setAttribute('cy',y+(id==='ballShadow'?4:0))}$('ballSeams').setAttribute('d',`M${x-27} ${y} Q${x} ${y-17} ${x+27} ${y} M${x} ${y-27} Q${x-18} ${y} ${x} ${y+27} M${x} ${y-27} Q${x+18} ${y} ${x} ${y+27}`)}
+
+let defenseRoles = Array(5).fill(2);
+
 function targetPositions(){
- const c=cfg(),o=s.off,b=o[ballHolder],d=s.def;
- // Hoop is on the RIGHT in this board. Goal-side means x >= own mark.x.
- const midY=546,margin=16;
- // Determine roles using distance to ball-holder; opposite side is identified
- // by being on the other side of the court's horizontal center line.
- const others=o.map((p,i)=>({i,dd:dist(p,b)}))
-   .filter(v=>v.i!==ballHolder).sort((a,z)=>a.dd-z.dd);
- const rank=Array(5).fill(2);rank[ballHolder]=0;
- others.forEach((v,k)=>rank[v.i]=k<2?1:2);
- let assign=[0,1,2,3,4];
- if(c.behavior==='switch'){
-   const used=new Set();
-   assign=d.map(dd=>{let best=-1,bd=Infinity;
-     for(let j=0;j<5;j++)if(!used.has(j)&&dist(dd,o[j])<bd){
-       bd=dist(dd,o[j]);best=j;
-     }
-     used.add(best);return best;
-   });
- }
+  const c=cfg(), o=s.off, b=o[ballHolder];
+  const midY=546;
+  const margin=16;
+
+  const distances=o.map((p,i)=>({
+    i,
+    distance:dist(p,b)
+  })).filter(v=>v.i!==ballHolder)
+    .sort((a,z)=>a.distance-z.distance);
+
+  const nextRoles=Array(5).fill(2);
+  nextRoles[ballHolder]=0;
+  distances.slice(0,2).forEach(v=>{
+    nextRoles[v.i]=1;
+  });
+
+  const result=s.def.map((def,i)=>{
+    const mark=o[i];
+    const oldRole=defenseRoles[i];
+    const newRole=nextRoles[i];
+
+    const onBall={
+      x:mark.x+c.gap,
+      y:mark.y+(midY-mark.y)*0.07
+    };
+
+    const gap={
+      x:Math.max(
+        mark.x+margin,
+        mark.x+(b.x-mark.x)*(.28+c.help*.10)
+      ),
+      y:mark.y+(b.y-mark.y)*(.28+c.help*.10)
+    };
+
+    const opposite=
+      (mark.y-midY)*(b.y-midY)<0;
+
+    const helpAmount=opposite?.62:.45;
+
+    const help={
+      x:mark.x+55+c.help*25,
+      y:mark.y+(midY-mark.y)*helpAmount
+    };
+
+    function position(role){
+      return role===0?onBall:
+             role===1?gap:help;
+    }
+
+    let target=position(newRole);
+
+    if(oldRole!==newRole && oldRole!==0 && newRole!==0){
+      const old=position(oldRole);
+      target={
+        x:old.x*.25+target.x*.75,
+        y:old.y*.25+target.y*.75
+      };
+    }
+
+    if(c.behavior==='help'){
+      target.y+=(midY-target.y)*.05;
+    }
+
+    if(c.behavior==='zone'){
+      target.y+=(midY-target.y)*.08;
+    }
+
+    const maxDistance=newRole===2?185:145;
+    const dx=target.x-mark.x;
+    const dy=target.y-mark.y;
+    const length=Math.hypot(dx,dy);
+
+    if(length>maxDistance){
+      const scale=maxDistance/length;
+      target.x=mark.x+dx*scale;
+      target.y=mark.y+dy*scale;
+    }
+
+    target.x=Math.max(target.x,mark.x+margin);
+
+    return {
+      x:clamp(target.x,24,800),
+      y:clamp(target.y,34,1064)
+    };
+  });
+
+  defenseRoles=nextRoles;
+  return result;
+}
  return d.map((dd,i)=>{
    const mark=o[assign[i]],role=rank[assign[i]];
    // Top possession: defenders assigned to either corner remain on the

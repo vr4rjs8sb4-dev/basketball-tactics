@@ -121,8 +121,7 @@ function el(tag,attrs={}){const n=document.createElementNS('http://www.w3.org/20
 function point(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());return{x:clamp(q.x,35,795),y:clamp(q.y,35,1065)}}
 function cfg(){return{behavior:$('behavior').value,help:+$('help').value/100,gap:+$('gap').value}}
 let passing = false;
-let passFrame = null;
-function syncBall(){
+let passFrame = null;function syncBall(){
   if(passing) return;
   const p=s.off[ballHolder];
   s.ball={

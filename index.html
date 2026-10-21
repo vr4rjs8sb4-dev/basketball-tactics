@@ -257,11 +257,7 @@ function targetPositions(){
       target.y+=(midY-target.y)*.08;
     }
 
-    const maxDistance=newRole===2?185:145;
-    const dx=target.x-mark.x;
-    const dy=target.y-mark.y;
-    const length=Math.hypot(dx,dy);
-
+  
     if(newRole!==2){
       const maxDistance=145;
       const dx=target.x-mark.x;
@@ -280,8 +276,11 @@ function targetPositions(){
       mark.x+margin
     );
 
-    
-    };
+
+   return {
+  x:clamp(target.x,24,800),
+  y:clamp(target.y,34,1064)
+};
   });
 
   defenseRoles=nextRoles;

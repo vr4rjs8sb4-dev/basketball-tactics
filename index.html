@@ -291,14 +291,16 @@ function targetPositions(){
       );
     }
 
+    return {
+      x:clamp(target.x,24,800),
+      y:clamp(target.y,34,1064)
+    };
+  });
 
-
-   return {
-  x:clamp(target.x,24,800),
-  y:clamp(target.y,
   defenseRoles=nextRoles;
-return result;
+  return result;
 }
+
 
 function enforceGoalSide(){
   if(!auto)return;

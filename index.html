@@ -216,15 +216,20 @@ function targetPositions(){
     const newRole=nextRoles[i];
 
    
-   const hoop={x:752,y:537};
+  
+    const hoop={x:752,y:537};
     const dx=hoop.x-mark.x;
     const dy=hoop.y-mark.y;
     const distanceToHoop=Math.hypot(dx,dy);
 
-    const onBall={
-      x:mark.x+(dx/distanceToHoop)*c.gap,
-      y:mark.y+(dy/distanceToHoop)*c.gap
-    }; 
+    const onBall={x:mark.x,y:mark.y};
+
+    if(distanceToHoop>0.001){
+      const gapDistance=Math.min(c.gap,distanceToHoop*0.5);
+      onBall.x=mark.x+dx/distanceToHoop*gapDistance;
+      onBall.y=mark.y+dy/distanceToHoop*gapDistance;
+    }
+
 
 
     const gap={
@@ -292,16 +297,23 @@ function targetPositions(){
   x:clamp(target.x,24,800),
   y:clamp(target.y,
   defenseRoles=nextRoles;
-  return result;
+return result;
 }
+
 function enforceGoalSide(){
- // Applied after every update, even during animations and AI toggles.
- if(!auto)return;
- for(let i=0;i<5;i++){
-   s.def[i].x=Math.max(s.def[i].x,s.off[i].x+16);
-   s.def[i].x=clamp(s.def[i].x,24,800);
- }
+  if(!auto)return;
+
+  for(let i=0;i<5;i++){
+    if(i===ballHolder)continue;
+
+    s.def[i].x=Math.max(
+      s.def[i].x,
+      s.off[i].x+16
+    );
+    s.def[i].x=clamp(s.def[i].x,24,800);
+  }
 }
+
 // Follow a continuously recalculated target, instead of teleporting on drag.
 let followActive=false,followLast=0,followFrame=null;
 

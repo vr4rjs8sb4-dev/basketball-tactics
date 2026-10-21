@@ -330,21 +330,47 @@ function enforceGoalSide(){
 }
 // Follow a continuously recalculated target, instead of teleporting on drag.
 let followActive=false,followLast=0,followFrame=null;
+
 function followTick(now){
- if(!auto){followActive=false;followFrame=null;return}
- const dt=Math.min(48,now-(followLast||now));followLast=now;
- const targets=targetPositions();
- // Smooth at every frame, including when a player crosses the corner boundary.
- const alpha=1-Math.exp(-dt/155);
- let moving=false;
- s.def.forEach((p,i)=>{
-   const t=targets[i],dx=t.x-p.x,dy=t.y-p.y;
-   if(Math.abs(dx)+Math.abs(dy)>.6)moving=true;
-   p.x+=dx*alpha;p.y+=dy*alpha;
- });
- enforceGoalSide();render(false);
- if(drag||moving){followFrame=requestAnimationFrame(followTick)}
- else{followActive=false;followFrame=null;followLast=0}
+  if(!auto){
+    followActive=false;
+    followFrame=null;
+    return;
+  }
+
+  const dt=Math.min(48,now-(followLast||now));
+  followLast=now;
+
+  const targets=targetPositions();
+  const alpha=1-Math.exp(-dt/210);
+  const maxStep=dt*0.55;
+
+  let moving=false;
+
+  s.def.forEach((p,i)=>{
+    const t=targets[i];
+    const dx=t.x-p.x;
+    const dy=t.y-p.y;
+    const distance=Math.hypot(dx,dy);
+
+    if(distance>0.6){
+      moving=true;
+      const step=Math.min(distance*alpha,maxStep);
+      p.x+=dx/distance*step;
+      p.y+=dy/distance*step;
+    }
+  });
+
+  enforceGoalSide();
+  render(false);
+
+  if(drag||moving){
+    followFrame=requestAnimationFrame(followTick);
+  }else{
+    followActive=false;
+    followFrame=null;
+    followLast=0;
+  }
 }
 function updateDefense(animate=true){
  if(!auto)return;

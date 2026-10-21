@@ -291,10 +291,20 @@ function targetPositions(){
       );
     }
 
+    
+    const inPaint=
+      mark.x>=452 && mark.x<=814 &&
+      mark.y>=394 && mark.y<=680;
+
+    if(inPaint){
+      target=onBall;
+    }
+
     return {
       x:clamp(target.x,24,800),
       y:clamp(target.y,34,1064)
     };
+
   });
 
   defenseRoles=nextRoles;
@@ -306,7 +316,14 @@ function enforceGoalSide(){
   if(!auto)return;
 
   for(let i=0;i<5;i++){
-    if(i===ballHolder)continue;
+    
+    const mark=s.off[i];
+    const inPaint=
+      mark.x>=452 && mark.x<=814 &&
+      mark.y>=394 && mark.y<=680;
+
+    if(i===ballHolder || inPaint)continue;
+
 
     s.def[i].x=Math.max(
       s.def[i].x,

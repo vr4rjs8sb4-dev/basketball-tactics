@@ -216,7 +216,7 @@ function targetPositions(){
     const newRole=nextRoles[i];
 
    
-    const hoop={x:752,y:537};
+   const hoop={x:752,y:537};
     const dx=hoop.x-mark.x;
     const dy=hoop.y-mark.y;
     const distanceToHoop=Math.hypot(dx,dy);
@@ -224,7 +224,7 @@ function targetPositions(){
     const onBall={
       x:mark.x+(dx/distanceToHoop)*c.gap,
       y:mark.y+(dy/distanceToHoop)*c.gap
-    };
+    }; 
 
 
     const gap={
@@ -278,18 +278,19 @@ function targetPositions(){
       }
     }
 
-    target.x=Math.max(
-      target.x,
-      mark.x+margin
-    );
+    
+    if(newRole!==0){
+      target.x=Math.max(
+        target.x,
+        mark.x+margin
+      );
+    }
+
 
 
    return {
   x:clamp(target.x,24,800),
-  y:clamp(target.y,34,1064)
-};
-  });
-
+  y:clamp(target.y,
   defenseRoles=nextRoles;
   return result;
 }
